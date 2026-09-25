@@ -32,10 +32,17 @@ set -eu
 set -o pipefail
 
 function show_help {
-  echo "Usage: $0 -v {major|minor|patch} [-d description] [--dry-run] [-i | --interactive] [--draft] [--pre-release] [--skip-rust-build]"
+  echo "Usage: $0 [-v {ffi|patch}] [-d description] [--dry-run] [-i | --interactive] [--draft] [--pre-release] [--skip-rust-build]"
+  echo
+  echo "The release version tracks the libpact_ffi version pinned in '$LIBPACT_FFI_VERSION_FILE':"
+  echo "pinning 'libpact_ffi-v0.5.9' releases 'v0.5.9'."
   echo
   echo "OPTIONS"
-  echo "  -v, --version         Version number to bump. Possible values are 'major', 'minor' or 'patch'."
+  echo "  -v, --version         What the version is derived from. Defaults to 'ffi'."
+  echo "                          ffi   - release the pinned libpact_ffi version."
+  echo "                          patch - Swift-side-only re-release against the same libpact_ffi."
+  echo "                                  Drifts the patch ahead of the FFI version so the tag still"
+  echo "                                  sorts higher for SwiftPM (FFI 0.5.9 already out -> v0.5.10)."
   echo "  -d, --description     Release description."
   echo "      --dry-run         Dry run won't tag or push the changes."
   echo "  -i, --interactive     Pauses after every step to allow for manual intervention."
@@ -48,7 +55,7 @@ function show_help {
   echo
   echo "  -h, --help            Display this message"
   echo
-  echo "Example: ./Support/release -v minor"
+  echo "Example: ./Support/Scripts/release --dry-run"
   echo
   exit 0
 }
@@ -63,9 +70,9 @@ source "$RELEASE_SOURCE_DIR/Config/config.sh"
 DRY_RUN=false
 SHOULD_BUILD_RUST_BIN=${SHOULD_BUILD_RUST_BIN:-true}
 CURRENT_BRANCH=$(git branch --show-current)
-RELEASE_VERSION_PART=""
+RELEASE_VERSION_PART="ffi"
 RELEASE_DESCRIPTION=""
-LATEST_TAG=$(latest_tag)
+LATEST_TAG="" # resolved after the arguments are parsed, so '--help' needs no network
 CHANGE_LOG=${CHANGE_LOG:-}
 REMOTE_NAME=${REMOTE_NAME:-}
 SHOULD_PAUSE_SCRIPT_EXECUTION=false
@@ -170,6 +177,25 @@ function git_check_clean_state {
   else
     die "Working directory contains changes! Commit, stash or reset changes and try again."
   fi
+}
+
+function git_check_submodules_initialised {
+  echo -e "👮 Checking the $SUBMODULE_XCFRAMEWORK submodule is initialised..."
+
+  # An uninitialised submodule is an empty directory, and 'cd' into it succeeds.
+  # git then walks UP to this repository, so every command in
+  # git_commit_changelog_to_xcframework_submodule — the commit, the tag, and
+  # 'git push origin main' — would land on pact-swift-mock-server instead of the
+  # release repo. That pushes an unreviewed release commit straight to main and
+  # tags it. Refuse up front rather than misfire.
+  #
+  # Checked even on a dry run: without the submodule there is nothing to rehearse.
+  if [ ! -f "$SUBMODULE_XCFRAMEWORK/Package.swift" ]; then
+    die "'$SUBMODULE_XCFRAMEWORK/Package.swift' is missing — the submodule is not initialised.
+  Run: git submodule update --init --recursive"
+  fi
+
+  echo "👍 Submodule is initialised."
 }
 
 function git_checkout_new_release_candidate_branch {
@@ -281,7 +307,7 @@ function github_create_pull_request_for_new_version {
   local version_branch="$2"
   local pr_message="Release: [$version_tag](https://github.com/$REPO_OWNER/$RELEASE_REPO_NAME/releases/tag/$version_tag)"
   local dry_run=; dry_run=$([ "$DRY_RUN" = true ] && echo "--dry-run" || echo "")
-  local open_pr_cmd="gh pr create --base $PR_HEAD_BRANCH --head \"$version_branch\" $dry_run --title \"$version_tag\" --body \"$pr_message\" --repo $REPO_OWNER/$XCPRODUCT_NAME"
+  local open_pr_cmd="gh pr create --base $PR_HEAD_BRANCH --head \"$version_branch\" $dry_run --title \"$version_tag\" --body \"$pr_message\" --repo $REPO_OWNER/$SOURCE_REPO_NAME"
 
   echo "🗃️ Opening a draft pull request..."
   execute_cmd "$open_pr_cmd"
@@ -311,8 +337,16 @@ function update_pactswiftmockserver_changelog {
   echo >> "${TAG_MESSAGE_FILE}"
 
   # Get the commits from last contribution for tag message
-  echo -e "🪵 Git logging '${LATEST_TAG}..HEAD'..."
-  executeCommand "git log --pretty='* [%h](https://github.com/$REPO_OWNER/$XCPRODUCT_NAME/commit/%h) - %s (%an)' ${LATEST_TAG}..HEAD >> $TAG_MESSAGE_FILE"
+  local log_range
+  log_range=$(release_notes_range "$LATEST_TAG")
+
+  if [ "$log_range" = "HEAD" ]; then
+    echo -e "🪵 Git logging the full history — ${YELLOW}${LATEST_TAG:-no previous release}$NOCOLOR is not a tag in this repository..."
+  else
+    echo -e "🪵 Git logging '$log_range'..."
+  fi
+
+  executeCommand "git log --pretty='* [%h](https://github.com/$REPO_OWNER/$SOURCE_REPO_NAME/commit/%h) - %s (%an)' $log_range >> $TAG_MESSAGE_FILE"
 
   # Show the new changes
   {
@@ -403,13 +437,17 @@ while [[ $# -gt 0 ]]; do
             if [[ -z $2 || $2 =~ ^- ]]; then
                 die "Error: Missing argument for '$2'."
             fi
-            if [[ "$2" == "major" || "$2" == "minor" || "$2" == "patch" ]]; then
+            if [[ "$2" == "ffi" || "$2" == "patch" ]]; then
                 RELEASE_VERSION_PART="$2"
-                echo -e "📈 Bumping up $YELLOW$RELEASE_VERSION_PART$NOCOLOR version..."
                 shift 2
+            elif [[ "$2" == "major" || "$2" == "minor" ]]; then
+                echo -e "${RED}error:$NOCOLOR $YELLOW'-v $2'$NOCOLOR is no longer supported."
+                echo -e "       Versions track libpact_ffi. Edit $YELLOW$LIBPACT_FFI_VERSION_FILE$NOCOLOR and use ${YELLOW}-v ffi$NOCOLOR (the default),"
+                echo -e "       or ${YELLOW}-v patch$NOCOLOR for a Swift-side-only re-release against the same libpact_ffi."
+                exit 64
             else
                 echo -e "${RED}error:$NOCOLOR Invalid argument $YELLOW'$2'$NOCOLOR for $YELLOW'$1'$NOCOLOR."
-                echo -e "       Must be either ${YELLOW}major$NOCOLOR, ${YELLOW}minor$NOCOLOR, or ${YELLOW}patch$NOCOLOR."
+                echo -e "       Must be either ${YELLOW}ffi$NOCOLOR or ${YELLOW}patch$NOCOLOR."
                 exit 64
             fi
             ;;
@@ -453,6 +491,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+LATEST_TAG=$(latest_tag)
 VERSION_TAG=$(generate_version_number "$RELEASE_VERSION_PART" "$RELEASE_DESCRIPTION")
 VERSION_BRANCH="rc/${VERSION_TAG// /_}"
 MARKETING_VERSION=${VERSION_TAG#v}
@@ -461,12 +500,16 @@ VERSIONED_XCFRAMEWORK_NAME="$XCFRAMEWORK_NAME-$VERSION_TAG"
 VERSIONED_XCFRAMEWORK_CHECKSUM="$XCFRAMEWORK_NAME-$VERSION_TAG.$XCFRAMEWORK_CHECKSUM_EXTENSION"
 NEW_VERSION_CHECKSUM=""
 
+echo -e "📈 Releasing $YELLOW$VERSION_TAG$NOCOLOR"
+echo -e "   wrapping ${LIGHT_BLUE}libpact_ffi-v$(libpact_ffi_version)$NOCOLOR (previous release: ${LATEST_TAG:-none})"
+
 ################################
 # Prepare package for release
 ################################
 
 # Pre-checks
 git_check_clean_state
+git_check_submodules_initialised
 pause_execution_and_cleanup $SHOULD_PAUSE_SCRIPT_EXECUTION
 
 # Bump up the MARKETING_VERSION in xcconfig so XCFramework uses the right version

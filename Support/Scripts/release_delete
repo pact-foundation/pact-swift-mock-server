@@ -86,7 +86,7 @@ function close_pr_for_version {
   local version_number="$1"
   local pr_number=
   local gh_search_pr=
-  local pact_swift_mock_server_repo=$XCPRODUCT_NAME
+  local pact_swift_mock_server_repo=$SOURCE_REPO_NAME
 
   gh_search_pr="gh search prs --match title \"$version_number\" --repo \"$REPO_OWNER/$pact_swift_mock_server_repo\" --jq '.[].number' --json number"
   echo -e "🤖 Executing:"

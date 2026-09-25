@@ -13,6 +13,12 @@ MACOSX_DEPLOYMENT_TARGET=12.0
 LIBPACT_FFI_VERSION_FILE="libpact_ffi.version"
 
 # Project configuration
+#
+# XCPRODUCT_NAME is the *Xcode* product: the .xcodeproj, the schemes, the built
+# framework and the name the XCFramework is published under. It is NOT the GitHub
+# repository name — those diverged when this repo moved to the pact-foundation
+# organisation and was renamed to 'pact-swift-mock-server'. Use SOURCE_REPO_NAME
+# for anything addressed to GitHub.
 XCPRODUCT_NAME="PactSwiftMockServer"
 XCFRAMEWORK_LOCATION="Framework"
 
@@ -26,6 +32,7 @@ XCFRAMEWORK_CHECKSUM_EXTENSION="zip.checksum" # The extension of the checksum fi
 SUBMODULE_XCFRAMEWORK="XCFramework" # The name of the submodule that contains and hosts the XCFramework release
 
 REPO_OWNER="pact-foundation" # Project owner on GitHub
+SOURCE_REPO_NAME="pact-swift-mock-server" # This repository on GitHub — where the release PR is opened
 RELEASE_REPO_NAME="pact-swift-xcframework" # The repo name to which a new release is being pushed
 REMOTE_REPO_BASE="git@github.com:$REPO_OWNER" # The SSH URI to the project owner's space
 
