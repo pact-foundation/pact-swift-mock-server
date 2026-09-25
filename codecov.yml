@@ -1,28 +1,26 @@
 codecov:
-  notify: {}
   require_ci_to_pass: true
 
 comment:
   behavior: default
-  layout: header, diff
+  layout: "header, diff"
   require_changes: false
 
 coverage:
   precision: 2
-  range:
-  - 75.0
-  - 100.0
   round: down
+  range: "75...100"
   status:
-    changes: false
-    patch: true
-    project: true
+    project:
+      default:
+        target: auto
+    patch:
+      default:
+        target: auto
 
 ignore:
-- (?s:Resources/.*/[^\/]+)\Z
-- ^Resources.*
-- (?s:Support/.*/[^\/]+)\Z
-- ^Support.*
+  - "Resources/**/*"
+  - "Support/**/*"
 
 parsers:
   gcov:

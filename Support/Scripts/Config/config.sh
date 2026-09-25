@@ -25,8 +25,8 @@ XCFRAMEWORK_CHECKSUM_EXTENSION="zip.checksum" # The extension of the checksum fi
 
 SUBMODULE_XCFRAMEWORK="XCFramework" # The name of the submodule that contains and hosts the XCFramework release
 
-REPO_OWNER="surpher" # Project owner on GitHub
-RELEASE_REPO_NAME="PactSwiftMockServerXCFramework" # The repo name to which a new release is being pushed
+REPO_OWNER="pact-foundation" # Project owner on GitHub
+RELEASE_REPO_NAME="pact-swift-xcframework" # The repo name to which a new release is being pushed
 REMOTE_REPO_BASE="git@github.com:$REPO_OWNER" # The SSH URI to the project owner's space
 
 PR_HEAD_BRANCH="main" # The branch to which the changes are pushed
