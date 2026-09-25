@@ -1,0 +1,81 @@
+name: "macOS 14"
+
+on:
+  workflow_call:
+    inputs:
+      rust-target-path:
+        required: true
+        type: string
+      binaries-path:
+        required: true
+        type: string
+      cache-key:
+        required: true
+        type: string
+      cache-restore-key:
+        required: true
+        type: string
+      submit-coverage-report:
+        required: true
+        type: boolean
+    secrets:
+      codecov_token:
+        required: true
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+
+jobs:
+  testMacOS14:
+    name: "🖥️ macOS 15"
+    runs-on: macos-15
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - scheme: "PactSwiftMockServer-iOS"
+            destination: "platform=iOS Simulator,name=iPhone 16 Pro"
+            submit_code_coverage: true
+          - scheme: "PactSwiftMockServer-macOS"
+            destination: "" # Intentionally left empty
+            submit_code_coverage: false
+
+    env:
+      SCHEME: ${{ matrix.scheme }}
+      DESTINATION: ${{ matrix.destination }}
+
+    concurrency:
+      group: test-macos15-${{ github.ref }}-${{ matrix.scheme }}
+      cancel-in-progress: true
+
+    steps:
+      - name: "♻️ Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: "♼ Cache rust binaries"
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ inputs.rust-target-path }}
+            ${{ inputs.binaries-path }}
+          key: ${{ inputs.cache-restore-key }}-${{ runner.os }}-${{ hashFiles('**/libpact_ffi.version') }}
+          restore-keys: |
+            ${{ inputs.cache-restore-key }}-${{ runner.os }}
+
+      - name: "🛠  Prepare Tools"
+        run: |
+          sh Support/Scripts/CI/configure_build_tools
+
+      - name: "⚗️  Run tests"
+        run: |
+          sh Support/Scripts/test
+
+      - name: "⬆️  Upload coverage reports"
+        if: ${{ matrix.submit_code_coverage && inputs.submit-coverage-report }}
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.codecov_token }}
+          verbose: true
