@@ -25,7 +25,7 @@ source "$VERSION_NUMBER_SCRIPT_SOURCE_DIR/../Config/config.sh"
 # Versioning model
 #
 # A release of this project is named after the libpact_ffi it wraps: pinning
-# 'libpact_ffi-v0.5.9' releases 'v0.5.9'. The version therefore comes from
+# 'pact_ffi-v0.5.12' releases 'v0.5.12'. The version therefore comes from
 # $LIBPACT_FFI_VERSION_FILE, not from incrementing whatever was released last.
 #
 # The one exception is a Swift-side-only fix against an already-released FFI
@@ -57,11 +57,12 @@ function latest_tag {
 }
 
 # The libpact_ffi version this repository is pinned to, without the tag prefix:
-# 'libpact_ffi-v0.5.9' -> '0.5.9'.
+# 'pact_ffi-v0.5.12' -> '0.5.12'. The legacy 'libpact_ffi-v' prefix is accepted too.
 function libpact_ffi_version {
   local raw
   raw=$(awk 'NR==1 {print; exit}' "$LIBPACT_FFI_VERSION_FILE")
   raw=${raw#libpact_ffi-}
+  raw=${raw#pact_ffi-}
   echo "${raw#v}"
 }
 
@@ -117,7 +118,7 @@ function generate_version_number {
 
       if [ -n "$latest_version" ] && ! __version_greater "$new_version" "$latest_version"; then
         die "v$new_version is not ahead of the latest release v$latest_version.
-  '$LIBPACT_FFI_VERSION_FILE' pins libpact_ffi-v$ffi_version, which has been released already.
+  '$LIBPACT_FFI_VERSION_FILE' pins pact_ffi-v$ffi_version, which has been released already.
   Bump '$LIBPACT_FFI_VERSION_FILE' and rebuild, or use '-v patch' for a Swift-side-only re-release."
       fi
       ;;
@@ -135,7 +136,7 @@ function generate_version_number {
       fi
 
       if [ "$new_version" != "$ffi_version" ]; then
-        echo "ℹ️ Swift-side-only release: v$new_version wraps libpact_ffi-v$ffi_version." >&2
+        echo "ℹ️ Swift-side-only release: v$new_version wraps pact_ffi $ffi_version." >&2
       fi
       ;;
 

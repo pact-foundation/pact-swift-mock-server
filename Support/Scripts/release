@@ -35,7 +35,7 @@ function show_help {
   echo "Usage: $0 [-v {ffi|patch}] [-d description] [--dry-run] [-i | --interactive] [--draft] [--pre-release] [--skip-rust-build]"
   echo
   echo "The release version tracks the libpact_ffi version pinned in '$LIBPACT_FFI_VERSION_FILE':"
-  echo "pinning 'libpact_ffi-v0.5.9' releases 'v0.5.9'."
+  echo "pinning 'pact_ffi-v0.5.12' releases 'v0.5.12'."
   echo
   echo "OPTIONS"
   echo "  -v, --version         What the version is derived from. Defaults to 'ffi'."
@@ -501,7 +501,7 @@ VERSIONED_XCFRAMEWORK_CHECKSUM="$XCFRAMEWORK_NAME-$VERSION_TAG.$XCFRAMEWORK_CHEC
 NEW_VERSION_CHECKSUM=""
 
 echo -e "📈 Releasing $YELLOW$VERSION_TAG$NOCOLOR"
-echo -e "   wrapping ${LIGHT_BLUE}libpact_ffi-v$(libpact_ffi_version)$NOCOLOR (previous release: ${LATEST_TAG:-none})"
+echo -e "   wrapping ${LIGHT_BLUE}pact_ffi-v$(libpact_ffi_version)$NOCOLOR (previous release: ${LATEST_TAG:-none})"
 
 ################################
 # Prepare package for release
