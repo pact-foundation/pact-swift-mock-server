@@ -86,6 +86,27 @@ LIBPACT_RUST_DIR="${WORKSPACE}/pact-reference/rust"
 source "$SOURCE_DIR/../utils.sh"
 source "$SOURCE_DIR/../Config/rust_config.sh"
 
+# Upstream tag for the pinned version. The pin may be written as 'pact_ffi-v0.5.12',
+# 'libpact_ffi-v0.5.9' or a bare 'v0.5.12'. Releases from 0.5.12 carry a 'pact_ffi-v'
+# tag; the 'libpact_ffi-v' tag is only created until 2027-06-30, and is the only one
+# that exists below 0.5.12. Run inside the pact-reference checkout, after fetching tags.
+function resolve_upstream_ffi_tag {
+  local version=$1
+  version=${version#libpact_ffi-}
+  version=${version#pact_ffi-}
+  version=${version#v}
+
+  local tag
+  for tag in "pact_ffi-v$version" "libpact_ffi-v$version"; do
+    if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+      echo "$tag"
+      return 0
+    fi
+  done
+
+  die "pact-reference has neither 'pact_ffi-v$version' nor 'libpact_ffi-v$version'."
+}
+
 #######################
 # Pre-requisite
 #######################
@@ -310,9 +331,10 @@ else
   echo "ℹ️ Changing location to ${LIBPACT_FFI_DIR}"
   executeCommand "cd $LIBPACT_FFI_DIR"
 
-  echo "ℹ️ Checking out ${LIBPACT_FFI_VERSION}"
   executeCommand "git fetch --all --tags"
-  executeCommand "git checkout tags/$LIBPACT_FFI_VERSION"
+  LIBPACT_FFI_TAG=$(resolve_upstream_ffi_tag "$LIBPACT_FFI_VERSION")
+  echo "ℹ️ Checking out ${LIBPACT_FFI_TAG}"
+  executeCommand "git checkout tags/$LIBPACT_FFI_TAG"
 fi
 
 ###############################

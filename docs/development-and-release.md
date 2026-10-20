@@ -28,8 +28,8 @@ a zipped XCFramework and distributing it as a binary target keeps a package reso
 
 ### Versioning
 
-**A release is named after the `libpact_ffi` it wraps.** Pinning `libpact_ffi-v0.5.9` in
-[`libpact_ffi.version`](../libpact_ffi.version) releases `v0.5.9`. There is no independent version
+**A release is named after the `libpact_ffi` it wraps.** Pinning `pact_ffi-v0.5.12` in
+[`libpact_ffi.version`](../libpact_ffi.version) releases `v0.5.12`. There is no independent version
 line to reason about: to release a new version, you bump the FFI pin.
 
 The one exception is a Swift-side-only fix against an FFI version that has already shipped. SwiftPM
@@ -172,11 +172,16 @@ the change most likely to break in an interesting way. As of writing this repo p
 upstream is at `0.5.9`.
 
 1. Edit [`libpact_ffi.version`](../libpact_ffi.version) to the new upstream tag, e.g.
-   `libpact_ffi-v0.5.9`. Available tags:
+   `pact_ffi-v0.5.12`. Available tags:
 
    ```bash
-   gh api repos/pact-foundation/pact-reference/tags --paginate -q '.[].name' | grep '^libpact_ffi'
+   gh api repos/pact-foundation/pact-reference/tags --paginate -q '.[].name' | grep '^pact_ffi-v'
    ```
+
+   From 0.5.12 upstream tags each release as `pact_ffi-v<version>`. Older versions only have
+   `libpact_ffi-v<version>` tags, and `build_rust_dependencies` falls back to that tag when the
+   `pact_ffi-v` one does not exist. Either spelling is accepted in the file. Upstream stops
+   creating `libpact_ffi-v` tags after 2027-06-30.
 2. Rebuild:
 
    ```bash
